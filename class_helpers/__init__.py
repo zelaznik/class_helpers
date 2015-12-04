@@ -6,7 +6,7 @@
     and abstract base classes (instances of abc.ABCMeta)
 """
 
-__all__ = ['class_helper_meta','patches','include','inherits','metaclass']
+__all__ = ['class_helper_meta','patches','includes','inherits','metaclass']
 
 from abc import ABCMeta
 class class_helper_meta(ABCMeta):
@@ -50,7 +50,7 @@ class class_helper_meta(ABCMeta):
         surrogate = type.__new__(mcls, cls_name, (), dct)
         return surrogate
 
-    def _unwrap_include(self, params):
+    def _unwrap_includes(self, params):
         dct = params['dct']
         for module in reversed(self.args):
             for base in module.__mro__:
@@ -95,16 +95,16 @@ def patches(value_or_array):
     """
     return class_helper_meta._wrap('patches', value_or_array)
 
-def include(value_or_array):
+def includes(value_or_array):
     """ Allows simple inline composition at class delaration time.
 
-        class Toyota(Car, include(Warranty)):
+        class Toyota(Car, includes(Warranty)):
             pass
 
         issubclass(Toyota, Car) # True
         issubclass(Toyota, Warranty) # False
     """
-    return class_helper_meta._wrap('include', value_or_array)
+    return class_helper_meta._wrap('includes', value_or_array)
 
 def metaclass(value_or_array):
     """ Allows consistent syntax for code shared betwen Python 2 and 3.

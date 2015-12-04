@@ -1,5 +1,5 @@
 from collections import namedtuple, Sized, Iterable, Container
-from class_helpers import class_helper_meta, patches, metaclass, inherits, include
+from class_helpers import class_helper_meta, patches, metaclass, inherits, includes
 from abc import ABCMeta, abstractmethod
 from operator import itemgetter
 import unittest
@@ -86,7 +86,7 @@ class test_metaclass_with_inheritance_wrapper(check_multiple_arguments, unittest
             pass
         self.Person = Person
         
-class test_include(check_multiple_arguments, unittest.TestCase):
+class test_includes(check_multiple_arguments, unittest.TestCase):
     subclass = staticmethod(metaclass)
     def setUp(self):
         class Base(ABCMeta('ABC',(),{})):
@@ -102,7 +102,7 @@ class test_include(check_multiple_arguments, unittest.TestCase):
             x, y = 0,-1
         class Bar(BarBase):
             x, y = -1, 8
-        class Person(BasePerson, include([FooBase, BarBase])):
+        class Person(BasePerson, includes([FooBase, BarBase])):
             first_name = property(itemgetter(0))
             last_name = property(itemgetter(1))
             def __init__(self, first_name, last_name):
@@ -113,7 +113,7 @@ class test_include(check_multiple_arguments, unittest.TestCase):
                 return '%s, %s' % (self.last_name, self.first_name)
         class Expected(BasePerson, FooBase, BarBase):
             pass
-        class MetaPerson(inherits(BasePerson), include(BarBase), metaclass(type)):
+        class MetaPerson(inherits(BasePerson), includes(BarBase), metaclass(type)):
             pass
         self.Expected = Expected
         self.Person = Person
