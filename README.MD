@@ -36,3 +36,14 @@ class Point(patches(Point)):
 
 assert Point is original_class #True
 ```
+
+## class_helpers.include
+##### Composition not inheritence.  Attributes from another class are copied and mixed in.
+
+```python
+class Toyota(Car, include(Warranty)):
+    pass
+
+issubclass(Toyota, Car) # True
+issubclass(Toyota, Warranty) # False
+```
