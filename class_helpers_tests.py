@@ -38,7 +38,8 @@ class test_metaclass(unittest.TestCase):
         self.assertIs(type(self.Person), ABCMeta)
         
     def test_bases_are_assigned_properly(self):
-        self.assertEqual(self.Person.__bases__,(self.BasePerson,Sized,Iterable,Container))
+        expected = (self.BasePerson,Sized,Iterable,Container)
+        self.assertEqual(self.Person.__bases__,expected)
         
 def test_metaclass_with_inheritance_wrapper(test_metaclass):
     def make_person(self):
