@@ -5,40 +5,10 @@
     Works for standard classes (instances of 'type')
     and abstract base classes (instances of abc.ABCMeta)
 """
-__all__ = ['class_helper_meta','patches','includes','inherits','metaclass']
+__all__ = ['class_helper_meta','patches','includes','inherits','metaclass','py3']
 
 from abc import ABCMeta
 class class_helper_meta(ABCMeta):
-    def __new__(mcls, name, surrogates_or_bases, dct):
-        params = {'name': name, 'dct': dct}
-        surrogates = []
-        bases = []
-        for item in surrogates_or_bases:
-            if isinstance(item, class_helper_meta):
-                surrogates.append(item)
-            else:
-                bases.append(item)
-        bases = params['bases'] = tuple(bases)
-        surrogates = params['surrogates'] = tuple(surrogates)
-
-        # Go backward in the event of multiple mixins
-        # That was the FIRST mixin is what is most recently
-        # Upated to the attributes dictionary
-        for surrogate in reversed(surrogates):
-            if surrogate.solo:
-                if len(surrogates) > 1:
-                    msg = "Cannot combine %s with any other helpers"
-                    raise TypeError(msg % (surrogate,))
-            func = getattr(mcls, '_unwrap_%s' % surrogate.name)
-            func(surrogate, params)
-
-        if 'cls' in params:
-            return params['cls']
-
-        meta = params.get('__metaclass__') or type
-        bases = params.get('bases') or ()
-        return meta(name, bases, dct)
-
     @classmethod
     def _wrap(mcls, name, value_or_array, **dct):
         dct['solo'] = dct.get('solo', False)
@@ -53,6 +23,42 @@ class class_helper_meta(ABCMeta):
         cls_name = '%s_surrogate' % name
         surrogate = type.__new__(mcls, cls_name, (), dct)
         return surrogate
+
+    def __new__(mcls, name, surrogates_or_bases, dct):
+        params = {'name': name, 'dct': dct}
+        surrogates = []
+        bases = []
+        for item in surrogates_or_bases:
+            if isinstance(item, class_helper_meta):
+                surrogates.append(item)
+            else:
+                bases.append(item)
+        bases = params['bases'] = tuple(bases)
+        surrogates = tuple(surrogates)
+        mcls.handle_surrogates(surrogates, params)
+
+        if 'cls' in params:
+            return params['cls']
+
+        meta = params.get('__metaclass__') or type
+        bases = params.get('bases') or ()
+        return meta(name, bases, dct)
+
+    @classmethod
+    def handle_surrogates(mcls, surrogates, params):
+        # Go backward in the event of multiple mixins
+        # That was the FIRST mixin is what is most recently
+        # Upated to the attributes dictionary
+        for surrogate in reversed(surrogates):
+            if surrogate.solo:
+                if len(surrogates) > 1:
+                    msg = "Cannot combine %s with any other helpers"
+                    raise TypeError(msg % (surrogate,))
+            func = getattr(mcls, '_unwrap_%s' % surrogate.name)
+            func(surrogate, params)
+
+    def _unwrap_py3(self, params):
+        self.handle_surrogates(self.args, params)
 
     def _unwrap_includes(self, params):
         dct = params['dct']
@@ -122,6 +128,9 @@ def metaclass(value_or_array):
         class WorksOnBoth(A, B, metaclass(ABCMeta)):
             pass
 
+        class AlsoThis(py3(A, B, metaclass=ABCMeta)):
+            pass
+
         If your bases classes cause a layout conflict,
         please use the "inherits" helper method
     """
@@ -133,4 +142,26 @@ def inherits(value_or_array):
             pass
     """
     return class_helper_meta._wrap('inherits', value_or_array)
+
+def py3(*bases, **dct):
+    """ Allows Python3 syntax to be ported into Python2 class definitions.
+        class Person(py3(A, B, metaclass=ABCMeta)):
+            pass
+    """
+    args = []
+    if bases:
+        args.append(inherits(bases))
+    if 'metaclass' in dct:
+        args.append(metaclass(dct['metaclass']))
+    if 'includes' in dct:
+        args.append(includes(dct['includes']))
+    return class_helper_meta._wrap('py3', tuple(args), solo=True)
+
+
+class Enumerable(object):
+    x,y,z = 3,4,5
+class A(object): pass
+class B(object): pass
+surrogate = py3(A, B, metaclass=ABCMeta, includes=[Enumerable])
+class C(surrogate): pass
 
