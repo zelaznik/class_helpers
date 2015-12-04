@@ -156,7 +156,7 @@ class test_patches_raises_error_with_other_helpers(unittest.TestCase):
         def attempt():
             class Thing(object):
                 pass
-            class Thing(inherits(object),inherits(type)):
+            class Thing(patches(Thing),inherits(object)):
                 pass
         self.assertRaises(TypeError, attempt)
 
@@ -164,7 +164,7 @@ class test_patches_raises_error_with_other_helpers(unittest.TestCase):
         def attempt():
             class Thing(object):
                 pass
-            class Thing(includes(object),includes(type)):
+            class Thing(patches(Thing),includes(object)):
                 pass
         self.assertRaises(TypeError, attempt)
 
