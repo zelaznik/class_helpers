@@ -3,6 +3,7 @@ from class_helpers import metaclass, inherits, includes, py3
 from collections import namedtuple, Sized, Iterable, Container
 from abc import ABCMeta, abstractmethod
 from operator import itemgetter
+from functools import wraps
 import unittest
 
 class BasePerson(object):
@@ -322,23 +323,21 @@ class test_py3_obsure_base_classes(unittest.TestCase):
 
 class test_class_decorator_wrapper(unittest.TestCase):
     def setUp(self):
+        # def wraps(orig):
+        #     def _wraps(cls):
+        #         cls.__module__ = orig.__module__
+        #         cls.__name__ = orig.__name__
+        #         cls.__doc__ = orig.__doc__
+        #         return cls
+        #    return _wraps
 
-        class Foo:
-            ''' foo doc '''
+        class Foo(object):
+            '''foo doc'''
             x = 3
 
-        def wraps(orig):
-            def _wraps(cls):
-                cls.__name__ = orig.__name__
-                cls.__doc__ = orig.__doc__
-                return cls
-            return _wraps
-
         class Bar(decorate(wraps(Foo))):
-            ''' bar doc '''
+            '''bar doc'''
             x = 4
-
-
 
         self.Foo, self.Bar = Foo, Bar
 
@@ -346,7 +345,7 @@ class test_class_decorator_wrapper(unittest.TestCase):
         del self.Foo, self.Bar
 
     def test_name_updates(self):
-        self.assertEqual(self.Foo.__name__, 'Bar')
+        self.assertEqual(self.Bar.__name__, 'Foo')
 
     def test_doc_update(self):
         self.assertEqual(self.Foo.__doc__, 'foo doc')

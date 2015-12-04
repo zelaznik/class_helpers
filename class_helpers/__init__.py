@@ -5,7 +5,7 @@
     Works for standard classes (instances of 'type')
     and abstract base classes (instances of abc.ABCMeta)
 """
-__all__ = ['class_helper_meta','patches','includes','inherits','metaclass','py3']
+__all__ = ['class_helper_meta','patches','includes','inherits','metaclass','py3','decorate']
 
 from abc import ABCMeta
 class class_helper_meta(ABCMeta):
@@ -42,6 +42,7 @@ class class_helper_meta(ABCMeta):
         else:
             meta = params.get('__metaclass__') or type
             bases = params.get('bases') or ()
+            name = params['name']
             cls = meta(name, bases, dct)
 
         return cls
@@ -101,8 +102,36 @@ class class_helper_meta(ABCMeta):
         '''
         for decorate in reversed(self.args):
             dct = params['dct']
-            class mock(object):
-                pass
+            setter = object.__setattr__
+            getter = object.__getattribute__.__call__
+            class Mock(object):
+                __slots__ = ('d',)
+                def __init__(self):
+                    setter(self, 'd', {})
+
+                def __repr__(self):
+                    name = getter(self, '__class__').__name__
+                    dct = getter(self, 'd')
+                    return '%s(%r)' % (name, dct)
+
+                def __setattr__(self, key, value):
+                    if key == '__name__':
+                        params['name'] = value
+                    else:
+                        d = getter(self, 'd')
+                        d[key] = value
+
+                def __getattribute__(self, key):
+                    try:
+                        return getter(self, 'd')[key]
+                    except KeyError:
+                        return getter(self, key)
+
+                @property
+                def __dict__(self):
+                    return getter(self, 'd').copy()
+
+            mock = Mock()
             old = dict(mock.__dict__)
             decorate(mock)
             new = dict(mock.__dict__)
