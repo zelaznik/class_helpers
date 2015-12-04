@@ -6,6 +6,8 @@
     and abstract base classes (instances of abc.ABCMeta)
 """
 
+__all__ = ['class_helper_meta','patches','include','inherits','metaclass']
+
 from abc import ABCMeta
 class class_helper_meta(ABCMeta):
     @staticmethod
@@ -142,3 +144,4 @@ def inherits(value_or_array):
             pass
     """
     return class_helper_meta._wrap('inherits', value_or_array)
+
