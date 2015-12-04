@@ -5,7 +5,6 @@
     Works for standard classes (instances of 'type')
     and abstract base classes (instances of abc.ABCMeta)
 """
-
 __all__ = ['class_helper_meta','patches','includes','inherits','metaclass']
 
 from abc import ABCMeta
@@ -26,6 +25,10 @@ class class_helper_meta(ABCMeta):
         # That was the FIRST mixin is what is most recently
         # Upated to the attributes dictionary
         for surrogate in reversed(surrogates):
+            if surrogate.solo:
+                if len(surrogates) > 1:
+                    msg = "Cannot combine %s with any other helpers"
+                    raise TypeError(msg % (surrogate,))
             func = getattr(mcls, '_unwrap_%s' % surrogate.name)
             func(surrogate, params)
 
@@ -38,6 +41,7 @@ class class_helper_meta(ABCMeta):
 
     @classmethod
     def _wrap(mcls, name, value_or_array, **dct):
+        dct['solo'] = dct.get('solo', False)
         dct['name'] = name
 
         # Args is either a single value, or an array of values
@@ -93,7 +97,7 @@ def patches(value_or_array):
 
         assert Point is orinal_class #True
     """
-    return class_helper_meta._wrap('patches', value_or_array)
+    return class_helper_meta._wrap('patches', value_or_array, solo=True)
 
 def includes(value_or_array):
     """ Allows simple inline composition at class delaration time.

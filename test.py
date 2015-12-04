@@ -1,5 +1,5 @@
-from collections import namedtuple, Sized, Iterable, Container
 from class_helpers import class_helper_meta, patches, metaclass, inherits, includes
+from collections import namedtuple, Sized, Iterable, Container
 from abc import ABCMeta, abstractmethod
 from operator import itemgetter
 import unittest
@@ -141,7 +141,32 @@ class test_includes(check_multiple_arguments, unittest.TestCase):
         self.assertEqual(self.p.y, self.e.y)
 
     def test_attribute_z_equivalent_value_to_inheritance(self):
-        self.assertEqual(self.p.z, self.e.z)   
+        self.assertEqual(self.p.z, self.e.z)
+
+class test_patches_raises_error_with_other_helpers(unittest.TestCase):
+    def test_patches_raises_error_with_metaclass(self):
+        def attempt():
+            class Thing(object):
+                pass
+            class Thing(patches(Thing),metaclass(type)):
+                pass
+        self.assertRaises(TypeError, attempt)
+
+    def test_patches_raises_error_with_inherits(self):
+        def attempt():
+            class Thing(object):
+                pass
+            class Thing(inherits(object),inherits(type)):
+                pass
+        self.assertRaises(TypeError, attempt)
+
+    def test_patches_raises_error_with_includes(self):
+        def attempt():
+            class Thing(object):
+                pass
+            class Thing(includes(object),includes(type)):
+                pass
+        self.assertRaises(TypeError, attempt)
 
 class test_patches(check_multiple_arguments, unittest.TestCase):
     subclass = staticmethod(metaclass)
