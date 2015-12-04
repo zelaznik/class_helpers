@@ -274,5 +274,50 @@ class test_py3(unittest.TestCase):
         self.Enumerable.z = 10
         self.assertEqual(self.C.z, 5)
 
+class test_py3_obsure_base_classes(unittest.TestCase):
+    def setUp(self):
+        class Enumerable(object):
+            x,y,z = 3,4,5
+
+        class UberMeta(type):
+            pass
+        
+        A = UberMeta('A',(),{})
+        class B(object):
+            pass
+        self.A, self.B, = A,B
+        self.Enumerable = Enumerable
+        self.UberMeta = UberMeta
+        
+    def make_class(self):
+        try:
+            return self.C
+        except AttributeError:
+            pass
+        A, B, Enumerable = self.A, self.B, self.Enumerable
+
+        class C(py3(A,B,includes=Enumerable)):
+            pass
+
+        self.C = C
+        return C
+
+    def tearDown(self):
+        del self.A, self.B
+        del self.Enumerable
+        del self.UberMeta
+        try:
+            del self.C
+        except AttributeError:
+            pass
+
+    def test_handles_inheritance_with_obscure_metaclass(self):
+        cls = self.make_class()
+        self.assertTrue(issubclass(cls, (self.A, self.B)))
+
+    def test_assigns_correct_obscure_metaclass(self):
+        cls = self.make_class()
+        self.assertTrue(isinstance(cls, self.UberMeta))
+
 if __name__ == '__main__':
     unittest.main()
