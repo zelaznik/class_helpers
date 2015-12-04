@@ -23,11 +23,7 @@ class class_helper_meta(ABCMeta):
         if not isinstance(dct, dict):
             return True
 
-    def __new__(mcls, *varargs, **kw):
-        if mcls.making_surrogate(*varargs, **kw):
-            return mcls._wrap(*varargs, **kw)
-    
-        name, surrogates_or_bases, dct = varargs
+    def __new__(mcls, name, surrogates_or_bases, dct):
         params = {'name': name, 'dct': dct}
         surrogates = []
         bases = []
@@ -36,7 +32,6 @@ class class_helper_meta(ABCMeta):
                 surrogates.append(item)
             else:
                 bases.append(item)
-
         bases = params['bases'] = tuple(bases)
         surrogates = params['surrogates'] = tuple(surrogates)
 
@@ -44,7 +39,8 @@ class class_helper_meta(ABCMeta):
         # That was the FIRST mixin is what is most recently
         # Upated to the attributes dictionary
         for surrogate in reversed(surrogates):
-            surrogate._unwrap(params)
+            func = getattr(mcls, '_unwrap_%s' % surrogate.name)
+            func(surrogate, params)
 
         if 'cls' in params:
             return params['cls']
@@ -54,28 +50,20 @@ class class_helper_meta(ABCMeta):
         return meta(name, bases, dct)
 
     @classmethod
-    def _wrap(mcls, *args, **dct):
-        name = '%s_surrogate' % mcls.__name__
-        if len(args) != 1:
-            err_msg = "%s() takes exactly 1 argument (%d given)"
-            err_args = (mcls.__name__, len(args))
-            raise TypeError(err_msg % err_args)
+    def _wrap(mcls, name, value_or_array, **dct):
+        dct['name'] = name
 
         # Args is either a single value, or an array of values
         try:
-            dct['args'] = tuple(args[0])
+            dct['args'] = tuple(value_or_array)
         except TypeError:
-            dct['args'] = (args[0],)
-        surrogate = type.__new__(mcls, name, (), dct)
+            dct['args'] = (value_or_array,)
+
+        cls_name = '%s_surrogate' % name
+        surrogate = type.__new__(mcls, cls_name, (), dct)
         return surrogate
 
-class include(class_helper_meta):
-    """ Copies the attributes from a source
-        This allows composition rather than inheritance        
-        class Person(Sized, Iterable, Container, include(XYZ)):
-            pass
-    """
-    def _unwrap(self, params):
+    def _unwrap_include(self, params):
         dct = params['dct']
         for module in reversed(self.args):
             for base in module.__mro__:
@@ -85,16 +73,7 @@ class include(class_helper_meta):
                 for key, value in items:
                     dct[key] = value
 
-class patches(class_helper_meta):
-    """ Allows for inline monkeypatching of pure Python classes:
-        from collections import namedtuple
-        Point = namedtuple(Point,('x','y'))
-        class Point(patches(Point)):
-            def __abs__(self):
-                return sqrt(self.x**2+self.y**2)
-    """
-
-    def _unwrap(self, params):
+    def _unwrap_patches(self, params):
         name, dct = params['name'], params['dct']
         (cls,) = self.args
         if cls.__name__ != name:
@@ -105,29 +84,25 @@ class patches(class_helper_meta):
         for key, value in dct.items():
             setattr(cls, key, value)
         params['cls'] = cls
-        
-class metaclass(class_helper_meta):
-    """ Allows for consistent syntax for Python2 and 3
-        class Py2_Syntax(A, B):
-            __metaclass__ = ABCMeta
-        class Py3_Syntax(A, B, metaclass=ABCMeta):
-            pass
-        class WorksForBoth(A, B, metaclass(ABCMeta)):
-            pass
-    """
-    def _unwrap(self, params):
+
+    def _unwrap_metaclass(self, params):
         (mcls,) = self.args
         params['__metaclass__'] = mcls
-        
-class inherits(class_helper_meta):
-    """ Use this wrapper if you are using a metaclass
-        other than the standard "type" and "abc.ABCMeta"
 
-        class ResolvesConflicts(inherits([A,B]), metaclass(SomeMeta)):
-            pass
-    """
-    def _unwrap(self, params):
+    def _unwrap_inherits(self, params):
         if params['bases']:
             msg = "Inconsistent base class layouts."
             raise TypeError(msg)
         params['bases'] = self.args
+
+def patches(value_or_array):
+    return class_helper_meta._wrap('patches', value_or_array)
+
+def include(value_or_array):
+    return class_helper_meta._wrap('include', value_or_array)
+
+def metaclass(value_or_array):
+    return class_helper_meta._wrap('metaclass', value_or_array)
+
+def inherits(value_or_array):
+    return class_helper_meta._wrap('inherits', value_or_array)

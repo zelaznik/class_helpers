@@ -1,7 +1,7 @@
 from collections import namedtuple, Sized, Iterable, Container
 from class_helpers import class_helper_meta, patches, metaclass, inherits, include
+from abc import ABCMeta, abstractmethod
 from operator import itemgetter
-from abc import ABCMeta
 import unittest
 
 class BasePerson(object):
@@ -19,26 +19,38 @@ class BasePerson(object):
     def full_name(self):
         return ', '.join([self.last_name, self.first_name])
 
-class test_class_helper_meta(unittest.TestCase):
-    subclass = class_helper_meta
+class check_multiple_arguments(object):
+    def subclass(self):
+        raise NotImplementedError
+
+    class A(object):
+        pass
+    class B(object):
+        pass
+    class C(object):
+        pass
 
     def test_parses_single_argument(self):
-        surrogate = self.subclass('A')
-        self.assertEqual(surrogate.args, ('A',))
+        A, B, C = self.A, self.B, self.C
+        surrogate = self.subclass(A)
+        self.assertEqual(surrogate.args, (A,))
         
     def test_rejects_three_arguments(self):
-        self.assertRaises(TypeError, self.subclass, 'A','B','C')
+        A, B, C = self.A, self.B, self.C
+        self.assertRaises(TypeError, self.subclass, A, B, C)
 
     def test_parses_array_with_single_argument(self):
-        surrogate = self.subclass(['A'])
-        self.assertEqual(surrogate.args, ('A',))
+        A, B, C = self.A, self.B, self.C
+        surrogate = self.subclass([A])
+        self.assertEqual(surrogate.args, (A,))
 
     def test_parses_array_with_multiple_arguments(self):
-        surrogate = self.subclass(['A','B','C'])
-        self.assertEqual(surrogate.args, ('A','B','C'))
+        A, B, C = self.A, self.B, self.C
+        surrogate = self.subclass([A,B,C])
+        self.assertEqual(surrogate.args, (A,B,C))
 
-class test_metaclass(test_class_helper_meta):
-    subclass = metaclass
+class test_metaclass(unittest.TestCase):
+    subclass = staticmethod(metaclass)
 
     class MyMeta(ABCMeta):
         pass
@@ -65,8 +77,8 @@ class test_metaclass(test_class_helper_meta):
         expected = (self.BasePerson,Sized,Iterable,Container)
         self.assertEqual(self.Person.__bases__,expected)
         
-def test_metaclass_with_inheritance_wrapper(test_class_helper_meta):
-    subclass = metaclass
+class test_metaclass_with_inheritance_wrapper(check_multiple_arguments, unittest.TestCase):
+    subclass = staticmethod(metaclass)
     def make_person(self):
         self.surrogate = metaclass(ABCMeta)
         bases = inherits(self.BasePerson, Sized, Iterable, Container)
@@ -74,8 +86,8 @@ def test_metaclass_with_inheritance_wrapper(test_class_helper_meta):
             pass
         self.Person = Person
         
-class test_include(test_class_helper_meta):
-    subclass = metaclass
+class test_include(check_multiple_arguments, unittest.TestCase):
+    subclass = staticmethod(metaclass)
     def setUp(self):
         class Base(ABCMeta('ABC',(),{})):
             first_name = 'Base First'
@@ -101,7 +113,7 @@ class test_include(test_class_helper_meta):
                 return '%s, %s' % (self.last_name, self.first_name)
         class Expected(BasePerson, FooBase, BarBase):
             pass
-        class MetaPerson(inherits(BasePerson), include(BarBase), metaclass(ABCMeta)):
+        class MetaPerson(inherits(BasePerson), include(BarBase), metaclass(type)):
             pass
         self.Expected = Expected
         self.Person = Person
@@ -131,8 +143,8 @@ class test_include(test_class_helper_meta):
     def test_attribute_z_equivalent_value_to_inheritance(self):
         self.assertEqual(self.p.z, self.e.z)   
 
-class test_patches(test_class_helper_meta):
-    subclass = metaclass
+class test_patches(check_multiple_arguments, unittest.TestCase):
+    subclass = staticmethod(metaclass)
     @staticmethod
     def make_person():
         return namedtuple('Person',('first_name','last_name'))
