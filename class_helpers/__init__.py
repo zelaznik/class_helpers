@@ -157,11 +157,3 @@ def py3(*bases, **dct):
         args.append(includes(dct['includes']))
     return class_helper_meta._wrap('py3', tuple(args), solo=True)
 
-
-class Enumerable(object):
-    x,y,z = 3,4,5
-class A(object): pass
-class B(object): pass
-surrogate = py3(A, B, metaclass=ABCMeta, includes=[Enumerable])
-class C(surrogate): pass
-

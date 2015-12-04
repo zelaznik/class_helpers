@@ -1,4 +1,4 @@
-from class_helpers import class_helper_meta, patches, metaclass, inherits, includes
+from class_helpers import class_helper_meta, patches, metaclass, inherits, includes, py3
 from collections import namedtuple, Sized, Iterable, Container
 from abc import ABCMeta, abstractmethod
 from operator import itemgetter
@@ -232,6 +232,47 @@ class test_patches_for_arbitrary_metaclass(test_patches):
                 self.first_name = first_name
                 self.last_name = last_name
         return Person
+
+class test_py3(unittest.TestCase):
+    def setUp(self):
+        class Enumerable(object):
+            x,y,z = 3,4,5
+        class A(object):
+            a = 0
+            x = -1
+        class B(object):
+            a = 1
+        surrogate = py3(A, B, metaclass=ABCMeta, includes=[Enumerable])
+        class C(surrogate):
+            pass
+        self.Enumerable = Enumerable
+        self.A, self.B, self.C = A, B, C
+        self.surrogate = surrogate
+
+    def tearDown(self):
+        del self.Enumerable, self.surrogate, self.A, self.B, self.C
+
+    def test_class_C_inherits_from_A(self):
+        self.assertTrue(issubclass(self.C, self.A))
+
+    def test_class_C_inherits_from_B(self):
+        self.assertTrue(issubclass(self.C, self.B))
+
+    def test_values_from_A_override_B(self):
+        self.assertEqual(self.C.a, 0)
+
+    def test_class_C_does_NOT_inherit_from_Enumerable(self):
+        self.assertFalse(issubclass(self.C, self.Enumerable))
+
+    def test_class_C_references_mixin_value_x(self):
+        self.assertEqual(self.C.x, 3)
+
+    def test_class_C_references_mixin_value_y(self):
+        self.assertEqual(self.C.y, 4)
+
+    def test_class_C_copies_values_not_references_them(self):
+        self.Enumerable.z = 10
+        self.assertEqual(self.C.z, 5)
 
 if __name__ == '__main__':
     unittest.main()
