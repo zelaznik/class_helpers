@@ -28,6 +28,18 @@ class WorksForBoth(A, B, metaclass(ABCMeta)):
     pass
 ```
 
+### py3:
+#### Allows pure Python3 metaclass syntax to be ported into Python3
+
+```python
+class WrapArgs(py3(A, B, metaclass=ABCMeta)):
+    pass
+
+# Can also mixin modules using keywords
+class WrapArgs(py3(A, B, mixin=Enumerable, metaclass=ABCMeta)):
+    pass
+```
+
 ### inherits
 ##### For resolving layout conflicts caused by the metaclass helper
 
