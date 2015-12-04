@@ -1,13 +1,14 @@
-import unittest
-from abc import ABCMeta
-from collections import namedtuple
+from collections import namedtuple, Sized, Iterable, Container
 from class_helpers import patches, metaclass
+from abc import ABCMeta
+import unittest
 
+class MyMeta(ABCMeta):
+    pass
 
 class test_metaclass(unittest.TestCase):
     def make_person(self):
-        self.surrogate = metaclass(ABCMeta)
-        class Person(self.surrogate):
+        class Person(Sized, Iterable, Container, metaclass(MyMeta)):
             def __init__(self, first_name, last_name):
                 self.first_name = first_name
                 self.last_name = last_name
@@ -24,6 +25,10 @@ class test_metaclass(unittest.TestCase):
 
     def test_metaclass_assigned_correctly(self):
         self.assertIs(type(self.Person), ABCMeta)
+        
+    def test_bases_are_assigned_properly(self):
+        self.assertEqual(self.Person.__bases__,(Sized,Iterable,Container))
+        
 
 class test_patches(unittest.TestCase):
     @staticmethod
