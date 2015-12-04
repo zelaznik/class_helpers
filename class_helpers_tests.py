@@ -1,5 +1,5 @@
 from collections import namedtuple, Sized, Iterable, Container
-from class_helpers import patches, metaclass, inherits, include
+from class_helpers import class_helper_meta, patches, metaclass, inherits, include
 from operator import itemgetter
 from abc import ABCMeta
 import unittest
@@ -18,6 +18,11 @@ class BasePerson(object):
     @property
     def full_name(self):
         return ', '.join([self.last_name, self.first_name])
+
+class test_class_helper_meta(unittest.TestCase):
+    def test_parses_single_argument(self):
+        self.assertEqual(class_helper_meta('A'), 'A')
+        
 
 class test_metaclass(unittest.TestCase):
     class MyMeta(ABCMeta):
