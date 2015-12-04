@@ -20,11 +20,26 @@ class BasePerson(object):
         return ', '.join([self.last_name, self.first_name])
 
 class test_class_helper_meta(unittest.TestCase):
-    def test_parses_single_argument(self):
-        self.assertEqual(class_helper_meta('A'), 'A')
-        
+    subclass = class_helper_meta
 
-class test_metaclass(unittest.TestCase):
+    def test_parses_single_argument(self):
+        surrogate = self.subclass('A')
+        self.assertEqual(surrogate.args, ('A',))
+        
+    def test_rejects_three_arguments(self):
+        self.assertRaises(TypeError, self.subclass, 'A','B','C')
+
+    def test_parses_array_with_single_argument(self):
+        surrogate = self.subclass(['A'])
+        self.assertEqual(surrogate.args, ('A',))
+
+    def test_parses_array_with_multiple_arguments(self):
+        surrogate = self.subclass(['A','B','C'])
+        self.assertEqual(surrogate.args, ('A','B','C'))
+
+class test_metaclass(test_class_helper_meta):
+    subclass = metaclass
+
     class MyMeta(ABCMeta):
         pass
 
@@ -50,7 +65,8 @@ class test_metaclass(unittest.TestCase):
         expected = (self.BasePerson,Sized,Iterable,Container)
         self.assertEqual(self.Person.__bases__,expected)
         
-def test_metaclass_with_inheritance_wrapper(test_metaclass):
+def test_metaclass_with_inheritance_wrapper(test_class_helper_meta):
+    subclass = metaclass
     def make_person(self):
         self.surrogate = metaclass(ABCMeta)
         bases = inherits(self.BasePerson, Sized, Iterable, Container)
@@ -58,7 +74,8 @@ def test_metaclass_with_inheritance_wrapper(test_metaclass):
             pass
         self.Person = Person
         
-class test_include(unittest.TestCase):
+class test_include(test_class_helper_meta):
+    subclass = metaclass
     def setUp(self):
         class Base(ABCMeta('ABC',(),{})):
             first_name = 'Base First'
@@ -114,7 +131,8 @@ class test_include(unittest.TestCase):
     def test_attribute_z_equivalent_value_to_inheritance(self):
         self.assertEqual(self.p.z, self.e.z)   
 
-class test_patches(unittest.TestCase):
+class test_patches(test_class_helper_meta):
+    subclass = metaclass
     @staticmethod
     def make_person():
         return namedtuple('Person',('first_name','last_name'))

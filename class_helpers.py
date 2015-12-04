@@ -23,11 +23,11 @@ class class_helper_meta(ABCMeta):
         if not isinstance(dct, dict):
             return True
 
-    def __new__(mcls, *args, **kw):
-        if mcls.making_surrogate(*args, **kw):
-            return mcls._wrap(*args, **kw)
+    def __new__(mcls, *varargs, **kw):
+        if mcls.making_surrogate(*varargs, **kw):
+            return mcls._wrap(*varargs, **kw)
     
-        name, surrogates_or_bases, dct = args
+        name, surrogates_or_bases, dct = varargs
         params = {'name': name, 'dct': dct}
         surrogates = []
         bases = []
@@ -56,16 +56,18 @@ class class_helper_meta(ABCMeta):
     @classmethod
     def _wrap(mcls, *args, **dct):
         name = '%s_surrogate' % mcls.__name__
-        dct['args'] = args
+        if len(args) != 1:
+            err_msg = "%s() takes exactly 1 argument (%d given)"
+            err_args = (mcls.__name__, len(args))
+            raise TypeError(err_msg % err_args)
+
+        # Args is either a single value, or an array of values
+        try:
+            dct['args'] = tuple(args[0])
+        except TypeError:
+            dct['args'] = (args[0],)
         surrogate = type.__new__(mcls, name, (), dct)
         return surrogate
-
-    @property
-    def get_bases(self):
-        try:
-            return tuple(self.args[0])
-        except TypeError:
-            return tuple(self.args)
 
 class include(class_helper_meta):
     """ Copies the attributes from a source
@@ -75,7 +77,7 @@ class include(class_helper_meta):
     """
     def _unwrap(self, params):
         dct = params['dct']
-        for module in reversed(self.get_bases):
+        for module in reversed(self.args):
             for base in module.__mro__:
                 if base is object:
                     continue
@@ -128,4 +130,4 @@ class inherits(class_helper_meta):
         if params['bases']:
             msg = "Inconsistent base class layouts."
             raise TypeError(msg)
-        params['bases'] = self.get_bases
+        params['bases'] = self.args
