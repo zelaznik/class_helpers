@@ -10,21 +10,6 @@ __all__ = ['class_helper_meta','patches','include','inherits','metaclass']
 
 from abc import ABCMeta
 class class_helper_meta(ABCMeta):
-    @staticmethod
-    def making_surrogate(*args, **kw):
-        try:
-            name, bases, dct = args
-        except ValueError:
-            return True
-        if kw:
-            return True        
-        if not isinstance(name, str):
-            return True
-        if not isinstance(bases, tuple):
-            return True
-        if not isinstance(dct, dict):
-            return True
-
     def __new__(mcls, name, surrogates_or_bases, dct):
         params = {'name': name, 'dct': dct}
         surrogates = []
