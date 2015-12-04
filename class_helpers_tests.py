@@ -1,19 +1,30 @@
 from collections import namedtuple, Sized, Iterable, Container
-from class_helpers import patches, metaclass
+from class_helpers import patches, metaclass, inherits
 from abc import ABCMeta
 import unittest
 
-class MyMeta(ABCMeta):
-    pass
-
 class test_metaclass(unittest.TestCase):
+    class MyMeta(ABCMeta):
+        pass
+
+    class BasePerson(object):
+        def __init__(self, *args):
+            self.args = args
+        def __len__(self):
+            return len(self.args)
+        def __iter__(self):
+            return iter(self)
+        def __getitem__(self, i):
+            return self.args[i]
+        def __contains__(self, value):
+            return value in self.args
+        def full_name(self):
+            return ', '([self.last_name, self.first_name])
+
     def make_person(self):
-        class Person(Sized, Iterable, Container, metaclass(MyMeta)):
-            def __init__(self, first_name, last_name):
-                self.first_name = first_name
-                self.last_name = last_name
-            def full_name(self):
-                return ', '([self.last_name, self.first_name])
+        surrogate = self.surrogate = metaclass(ABCMeta)
+        class Person(self.BasePerson, Sized, Iterable, Container, surrogate):
+            pass
         self.Person = Person
         
     def setUp(self):
@@ -27,7 +38,15 @@ class test_metaclass(unittest.TestCase):
         self.assertIs(type(self.Person), ABCMeta)
         
     def test_bases_are_assigned_properly(self):
-        self.assertEqual(self.Person.__bases__,(Sized,Iterable,Container))
+        self.assertEqual(self.Person.__bases__,(self.BasePerson,Sized,Iterable,Container))
+        
+def test_metaclass_with_inheritance_wrapper(test_metaclass):
+    def make_person(self):
+        self.surrogate = metaclass(ABCMeta)
+        bases = inherits(self.BasePerson, Sized, Iterable, Container)
+        class Person(bases, metaclass(ABCMeta)):
+            pass
+        self.Person = Person        
         
 
 class test_patches(unittest.TestCase):

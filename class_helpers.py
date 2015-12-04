@@ -1,9 +1,13 @@
 """ A suite of metaprogramming functions which allow more flexible
     class maniuplation such as mixins and monkey patching, while
     still writing "Pythonic" code.
+
+    Works for standard classes (instances of 'type')
+    and abstract base classes (instances of abc.ABCMeta)
 """
 
-class class_helper_meta(type):
+from abc import ABCMeta
+class class_helper_meta(ABCMeta):
     @staticmethod
     def making_surrogate(*args, **kw):
         try:
@@ -20,35 +24,31 @@ class class_helper_meta(type):
             return True
 
     def __new__(mcls, *args, **kw):
-        try:
-            if mcls.making_surrogate(*args, **kw):
-                return mcls._wrap(*args, **kw)
-        
-            name, surrogates_or_bases, dct = args
-            params = {'name': name, 'dct': dct}
-            surrogates = []
-            bases = []
-            for item in surrogates_or_bases:
-                if isinstance(item, class_helper_meta):
-                    surrogates.append(item)
-                else:
-                    bases.append(item)
-
-            bases = params['bases'] = tuple(bases)
-            surrogates = params['surrogates'] = tuple(surrogates)
-
-            for surrogate in surrogates:
-                surrogate._unwrap(params)
+        if mcls.making_surrogate(*args, **kw):
+            return mcls._wrap(*args, **kw)
     
-            if 'cls' in params:
-                return params['cls']
-    
-            meta = params.get('__metaclass__') or type
-            bases = params.get('bases') or ()
-            return meta.__new__(meta, name, bases, dct)
-        except Exception:
-            globals().update(locals())
-            raise
+        name, surrogates_or_bases, dct = args
+        params = {'name': name, 'dct': dct}
+        surrogates = []
+        bases = []
+        for item in surrogates_or_bases:
+            if isinstance(item, class_helper_meta):
+                surrogates.append(item)
+            else:
+                bases.append(item)
+
+        bases = params['bases'] = tuple(bases)
+        surrogates = params['surrogates'] = tuple(surrogates)
+
+        for surrogate in surrogates:
+            surrogate._unwrap(params)
+
+        if 'cls' in params:
+            return params['cls']
+
+        meta = params.get('__metaclass__') or type
+        bases = params.get('bases') or ()
+        return meta(name, bases, dct)
 
     @classmethod
     def _wrap(mcls, *args, **dct):
@@ -73,8 +73,7 @@ class patches(class_helper_meta):
             msg = """Inconsistent naming orig=%s, new=%s"""
             raise TypeError(msg % (cls.__name__, name))
         if params['bases']:
-            raise TypeError("Cannot alter inheritance of pre-existing class.")    
-            
+            raise TypeError("Cannot alter inheritance of pre-existing class.")
         for key, value in dct.items():
             setattr(cls, key, value)
         params['cls'] = cls
@@ -91,6 +90,16 @@ class metaclass(class_helper_meta):
     def _unwrap(self, params):
         (mcls,) = self.args
         params['__metaclass__'] = mcls
+        
+class inherits(class_helper_meta):
+    """ Use this wrapper if you are using a metaclass
+        other than the standard "type" and "abc.ABCMeta"
+    """
+    def _unwrap(self, params):
+        if params['bases']:
+            msg = "Inconsistent base class layouts."
+            raise TypeError(msg)
+        params['bases'] = self.bases
 
 class mixin(class_helper_meta):
     """ Copies the attributes from a source
