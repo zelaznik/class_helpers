@@ -40,7 +40,10 @@ class class_helper_meta(ABCMeta):
         bases = params['bases'] = tuple(bases)
         surrogates = params['surrogates'] = tuple(surrogates)
 
-        for surrogate in surrogates:
+        # Go backward in the event of multiple mixins
+        # That was the FIRST mixin is what is most recently
+        # Upated to the attributes dictionary
+        for surrogate in reversed(surrogates):
             surrogate._unwrap(params)
 
         if 'cls' in params:
@@ -56,6 +59,29 @@ class class_helper_meta(ABCMeta):
         dct['args'] = args
         surrogate = type.__new__(mcls, name, (), dct)
         return surrogate
+
+    @property
+    def get_bases(self):
+        try:
+            return tuple(self.args[0])
+        except TypeError:
+            return tuple(self.args)
+
+class include(class_helper_meta):
+    """ Copies the attributes from a source
+        This allows composition rather than inheritance        
+        class Person(Sized, Iterable, Container, include(XYZ)):
+            pass
+    """
+    def _unwrap(self, params):
+        dct = params['dct']
+        for module in reversed(self.get_bases):
+            for base in module.__mro__:
+                if base is object:
+                    continue
+                items = base.__dict__.items()
+                for key, value in items:
+                    dct[key] = value
 
 class patches(class_helper_meta):
     """ Allows for inline monkeypatching of pure Python classes:
@@ -94,14 +120,12 @@ class metaclass(class_helper_meta):
 class inherits(class_helper_meta):
     """ Use this wrapper if you are using a metaclass
         other than the standard "type" and "abc.ABCMeta"
+
+        class ResolvesConflicts(inherits([A,B]), metaclass(SomeMeta)):
+            pass
     """
     def _unwrap(self, params):
         if params['bases']:
             msg = "Inconsistent base class layouts."
             raise TypeError(msg)
-        params['bases'] = self.bases
-
-class mixin(class_helper_meta):
-    """ Copies the attributes from a source
-        This allows composition rather than inheritance.
-    """
+        params['bases'] = self.get_bases

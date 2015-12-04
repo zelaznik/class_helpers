@@ -1,25 +1,29 @@
 from collections import namedtuple, Sized, Iterable, Container
-from class_helpers import patches, metaclass, inherits
+from class_helpers import patches, metaclass, inherits, include
+from operator import itemgetter
 from abc import ABCMeta
 import unittest
+
+class BasePerson(object):
+    def __init__(self, *args):
+        self.args = args
+    def __len__(self):
+        return len(self.args)
+    def __iter__(self):
+        return iter(self)
+    def __getitem__(self, i):
+        return self.args[i]
+    def __contains__(self, value):
+        return value in self.args
+    @property
+    def full_name(self):
+        return ', '.join([self.last_name, self.first_name])
 
 class test_metaclass(unittest.TestCase):
     class MyMeta(ABCMeta):
         pass
 
-    class BasePerson(object):
-        def __init__(self, *args):
-            self.args = args
-        def __len__(self):
-            return len(self.args)
-        def __iter__(self):
-            return iter(self)
-        def __getitem__(self, i):
-            return self.args[i]
-        def __contains__(self, value):
-            return value in self.args
-        def full_name(self):
-            return ', '([self.last_name, self.first_name])
+    BasePerson = BasePerson
 
     def make_person(self):
         surrogate = self.surrogate = metaclass(ABCMeta)
@@ -47,8 +51,63 @@ def test_metaclass_with_inheritance_wrapper(test_metaclass):
         bases = inherits(self.BasePerson, Sized, Iterable, Container)
         class Person(bases, metaclass(ABCMeta)):
             pass
-        self.Person = Person        
+        self.Person = Person
         
+class test_include(unittest.TestCase):
+    def setUp(self):
+        class Base(ABCMeta('ABC',(),{})):
+            first_name = 'Base First'
+            last_name = 'Base Last'
+            x,y = 3,4
+        class FooBase(Base):
+            last_name = 'FooBase Last'
+            z = 5
+        class BarBase(Base):
+            z = 7
+        class Foo(FooBase):
+            x, y = 0,-1
+        class Bar(BarBase):
+            x, y = -1, 8
+        class Person(BasePerson, include([FooBase, BarBase])):
+            first_name = property(itemgetter(0))
+            last_name = property(itemgetter(1))
+            def __init__(self, first_name, last_name):
+                self.arr = [first_name, last_name]
+            def __getitem__(self, i):
+                return self.arr[i]
+            def __repr__(self):
+                return '%s, %s' % (self.last_name, self.first_name)
+        class Expected(BasePerson, FooBase, BarBase):
+            pass
+        class MetaPerson(inherits(BasePerson), include(BarBase), metaclass(ABCMeta)):
+            pass
+        self.Expected = Expected
+        self.Person = Person
+        self.FooBase = FooBase
+        self.BarBase = BarBase
+        self.p = self.Person('Steve','Zelaznik')
+        self.e = self.Expected("Steve",'Zelaznik')
+
+    def test_mixins_override_inheritence(self):
+        self.assertEqual(self.p.first_name, 'Base First')
+        
+    def test_left_mixins_have_priority(self):
+        self.assertEqual(self.p.last_name, 'Base Last')
+        
+    def test_object_does_not_inherit_foo_base(self):
+        self.assertNotIn(self.FooBase, self.Person.__mro__)
+    
+    def test_object_does_not_inherit_bar_base(self):
+        self.assertNotIn(self.BarBase, self.Person.__mro__)
+    
+    def test_attribute_x_equivalent_value_to_inheritance(self):
+        self.assertEqual(self.p.x, self.e.x)
+
+    def test_attribute_y_equivalent_value_to_inheritance(self):
+        self.assertEqual(self.p.y, self.e.y)
+
+    def test_attribute_z_equivalent_value_to_inheritance(self):
+        self.assertEqual(self.p.z, self.e.z)   
 
 class test_patches(unittest.TestCase):
     @staticmethod
