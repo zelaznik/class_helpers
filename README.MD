@@ -16,13 +16,23 @@ class WorksForBoth(A, B, metaclass(ABCMeta)):
     pass
 ```
 
+## class_helpers.inherits
+##### For resolving layout conflicts caused by the metaclass helper
+
+```python
+class Fixed(inherits([A,B]), metaclass(ABCMeta)):
+    pass
+```
+
 ## class_helpers.patches
 ##### Allows inline monkey patching of existing classes
 
 ```python
-from collections import namedtuple
-Point = namedtuple('Point',('x','y'))
+Point = collections.namedtuple('Point',('x','y'))
+original_class = Point
 class Point(patches(Point)):
     def __abs__(self):
-        return (self.x**2+self.y**2)**0.5
+        return (self.x**2 + self.y**2) ** 0.5
+
+assert Point is original_class #True
 ```
