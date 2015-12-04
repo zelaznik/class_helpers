@@ -36,7 +36,7 @@ class WrapArgs(py3(A, B, metaclass=ABCMeta)):
     pass
 
 # Can also mixin modules using keywords
-class WrapArgs(py3(A, B, mixin=Enumerable, metaclass=ABCMeta)):
+class WrapArgs(py3(A, B, includes=Enumerable, metaclass=ABCMeta)):
     pass
 ```
 
