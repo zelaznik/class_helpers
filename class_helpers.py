@@ -96,13 +96,49 @@ class class_helper_meta(ABCMeta):
         params['bases'] = self.args
 
 def patches(value_or_array):
+    """ Allows for inline monkey patching of classes
+
+        Point = collections.namedtuple('Point',('x','y'))
+        original_class = Point
+        class Point(patches(point)):
+            def __abs__(self):
+                return (self.x**2 + self.y**2) ** 0.5
+
+        assert Point is orinal_class #True
+    """
     return class_helper_meta._wrap('patches', value_or_array)
 
 def include(value_or_array):
+    """ Allows simple inline composition at class delaration time.
+
+        class Toyota(Car, include(Warranty)):
+            pass
+
+        issubclass(Toyota, Car) # True
+        issubclass(Toyota, Warranty) # False
+    """
     return class_helper_meta._wrap('include', value_or_array)
 
 def metaclass(value_or_array):
+    """ Allows consistent syntax for code shared betwen Python 2 and 3.
+
+        class Python2(A, B):
+            __metaclass__ = ABCMeta
+
+        class Python3(A, B, metaclass=ABCMeta):
+            pass
+
+        class WorksOnBoth(A, B, metaclass(ABCMeta)):
+            pass
+
+        If your bases classes cause a layout conflict,
+        please use the "inherits" helper method
+    """
     return class_helper_meta._wrap('metaclass', value_or_array)
 
 def inherits(value_or_array):
+    """ Resolves any sporadic layout conflices in the metaclass helper
+        class Fixed(inherits([A,B]), metaclass(ABCMeta)):
+            pass
+    """
     return class_helper_meta._wrap('inherits', value_or_array)
