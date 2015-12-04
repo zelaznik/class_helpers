@@ -1,8 +1,8 @@
 import unittest
-from collections import namedtuple, Sized, Iterable, Container
-from class_helpers import patches, metaclass, inherits
-from operator import itemgetter
 from abc import ABCMeta
+from collections import namedtuple
+from class_helpers import patches, metaclass
+
 
 class test_metaclass(unittest.TestCase):
     def make_person(self):
@@ -24,50 +24,6 @@ class test_metaclass(unittest.TestCase):
 
     def test_metaclass_assigned_correctly(self):
         self.assertIs(type(self.Person), ABCMeta)
-
-class test_inherits(unittest.TestCase):
-    def make_person(self):
-        self.surrogate = inherits(Sized, Iterable, Container)
-        class Person(self.surrogate):
-            first_name = property(itemgetter(0))
-            last_name = property(itemgetter(1))
-            def __init__(self, *args):
-                self.arr = args
-            def __getitem__(self, index):
-                return self.arr[index]
-            def __len__(self):
-                return len(self.arr)
-            def __iter__(self):
-                return iter(self.arr)
-            def __contains__(self, value):
-                return value in self.arr
-        self.Person = Person
-                
-    def setUp(self):
-        self.make_person()
-        self.p = self.Person('Steve','Zelaznik')
-        
-    def tearDown(self):
-        del self.Person
-        
-    def test_inherits_class_bases_are_correct(self):
-        self.assertEqual(self.Person.__bases__, (Sized,Iterable,Container))
-        
-    def test_inherits_attributes_read_correctly_first_name(self):
-        self.assertEqual(self.p.first_name, 'Steve')
-
-    def test_inherits_attributes_read_correctly_last_name(self):
-        self.assertEqual(self.p.last_name, 'Zelaznik')
-        
-    def test_inherits_attributes_read_correctly_length(self):
-        self.assertEqual(len(self.p), 2)
-
-    def test_inherits_attributes_read_correctly_iter(self):
-        self.assertEqual(list(self.p), ['Steve','Zelaznik'])
-        
-    def test_inherits_attributes_read_correctly_contains(self):
-        self.assertIn('Steve', self.p)
-        self.assertNotIn('blah', self.p)
 
 class test_patches(unittest.TestCase):
     @staticmethod
@@ -108,7 +64,8 @@ class test_patches(unittest.TestCase):
         def try_bad_name():
             class WrongName(self.surrogate):
                 pass
-        self.assertRaises(ValueError, try_bad_name)
+        self.assertRaises(TypeError, type, 'WrongName', (self.surrogate,), {})
+        self.assertRaises(TypeError, try_bad_name)
         
 class test_patches_for_ABCMeta(test_patches):
     @staticmethod

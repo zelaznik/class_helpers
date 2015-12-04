@@ -71,7 +71,10 @@ class patches(class_helper_meta):
         (cls,) = self.args
         if cls.__name__ != name:
             msg = """Inconsistent naming orig=%s, new=%s"""
-            raise ValueError(msg % (cls.__name__, name))
+            raise TypeError(msg % (cls.__name__, name))
+        if params['bases']:
+            raise TypeError("Cannot alter inheritance of pre-existing class.")    
+            
         for key, value in dct.items():
             setattr(cls, key, value)
         params['cls'] = cls
@@ -82,18 +85,12 @@ class metaclass(class_helper_meta):
             __metaclass__ = ABCMeta
         class Py3_Syntax(A, B, metaclass=ABCMeta):
             pass
-        class WorksForBoth(inherits(A,B), metaclass(ABCMeta)):
+        class WorksForBoth(A, B, metaclass(ABCMeta)):
             pass
     """
     def _unwrap(self, params):
         (mcls,) = self.args
         params['__metaclass__'] = mcls
-        
-class inherits(class_helper_meta):
-    """ To be used with the "metaclass" helper.  See doc below:
-        %s """ % metaclass.__doc__
-    def _unwrap(self, params):
-        params['bases'] = self.args
 
 class mixin(class_helper_meta):
     """ Copies the attributes from a source
