@@ -11,5 +11,5 @@ setup(
     packages = ['class_helpers'],
     license  = 'MIT License',
 
-    description = 'Allows monkey patching, mixins, composition, and more, all within Pythonic syntax.',
+    description = """Allows monkey patching, mixins, composition, and more, all within Pythonic syntax.',
 )
