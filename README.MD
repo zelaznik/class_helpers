@@ -1,5 +1,8 @@
 # Class Helpers
 - A set of metaprogramming patterns to allow more flexible class manipulation, but with Pythonic syntax.
+- Allows metaclasses to be declared in a neat consistent syntax for both Python 2 and 3
+- Allows monkey patching of existing classes.
+  - Useful for customizing output from factory functions such as namedtuple.
 
 ## class_helpers.metaclass
 ##### For consistent metaclass Syntax between Python 2 and 3
