@@ -4,65 +4,98 @@
 """
 
 class class_helper_meta(type):
-    def __new__(mcls, *args):
-        if len(args) == 1:
-            return mcls.__wrap(*args)
-        elif len(args) == 3:
-            return mcls.__unwrap(*args)
+    @staticmethod
+    def making_surrogate(*args, **kw):
+        try:
+            name, bases, dct = args
+        except ValueError:
+            return True
+        if kw:
+            return True        
+        if not isinstance(name, str):
+            return True
+        if not isinstance(bases, tuple):
+            return True
+        if not isinstance(dct, dict):
+            return True
+
+    def __new__(mcls, *args, **kw):
+        try:
+            if mcls.making_surrogate(*args, **kw):
+                return mcls._wrap(*args, **kw)
+        
+            name, surrogates_or_bases, dct = args
+            params = {'name': name, 'dct': dct}
+            surrogates = []
+            bases = []
+            for item in surrogates_or_bases:
+                if isinstance(item, class_helper_meta):
+                    surrogates.append(item)
+                else:
+                    bases.append(item)
+
+            bases = params['bases'] = tuple(bases)
+            surrogates = params['surrogates'] = tuple(surrogates)
+
+            for surrogate in surrogates:
+                surrogate._unwrap(params)
+    
+            if 'cls' in params:
+                return params['cls']
+    
+            meta = params.get('__metaclass__') or type
+            bases = params.get('bases') or ()
+            return meta.__new__(meta, name, bases, dct)
+        except Exception:
+            globals().update(locals())
+            raise
 
     @classmethod
-    def __wrap(mcls, item):
-        bases = (item,)
-        name = 'patches_%s' % item.__name__
-        args = (mcls, name, bases, {})
-        surrogate = type.__new__(*args)
+    def _wrap(mcls, *args, **dct):
+        name = '%s_surrogate' % mcls.__name__
+        dct['args'] = args
+        surrogate = type.__new__(mcls, name, (), dct)
         return surrogate
 
 class patches(class_helper_meta):
-    """ Allows for inline editing of Python classes.  Especially useful
-        when fiddling with code in an interactive Python session.
-        
-        EXAMPLE:
-            from collections import namedtuple
-            Person = namedtuple('Person',('first_name','last_name'))
-            orig_class = Person
-            class Person(patches(Person)):
-                @property
-                def full_name(self):
-                    return ' '.join([self.first_name, self.last_name])
-            assert Person is orig_class
-
-        I built this specifically to be able to use collections.namedtuple.
-        This way I can use the their template but still add my own features,
-        without adding an unncessary subclass, or doing ugly monkeypatching.
+    """ Allows for inline monkeypatching of pure Python classes:
+        from collections import namedtuple
+        Point = namedtuple(Point,('x','y'))
+        class Point(patches(Point)):
+            def __abs__(self):
+                return sqrt(self.x**2+self.y**2)
     """
 
-    @classmethod
-    def __unwrap(mcls, name, bases, dct):
-        if len(bases) != 1 or not isinstance(bases[0], patches):
-            d = {'name':name,'bases':bases,'dct':dct}
-            raise ValueError("Invalid arguments: %r" % d)
-
-        (surrogate,) = bases
-        (cls,) = surrogate.__bases__
-
+    def _unwrap(self, params):
+        name, dct = params['name'], params['dct']
+        (cls,) = self.args
         if cls.__name__ != name:
             msg = """Inconsistent naming orig=%s, new=%s"""
             raise ValueError(msg % (cls.__name__, name))
-
-        for name, value in dct.items():
-            setattr(cls, name, value)
-
-        return cls
+        for key, value in dct.items():
+            setattr(cls, key, value)
+        params['cls'] = cls
         
-
-
-
-
-
-
-
-
-
-
+class metaclass(class_helper_meta):
+    """ Allows for consistent syntax for Python2 and 3
+        class Py2_Syntax(A, B):
+            __metaclass__ = ABCMeta
+        class Py3_Syntax(A, B, metaclass=ABCMeta):
+            pass
+        class WorksForBoth(inherits(A,B), metaclass(ABCMeta)):
+            pass
+    """
+    def _unwrap(self, params):
+        (mcls,) = self.args
+        params['__metaclass__'] = mcls
         
+class inherits(class_helper_meta):
+    """ To be used with the "metaclass" helper.  See doc below:
+        %s """ % metaclass.__doc__
+    def _unwrap(self, params):
+        params['bases'] = self.args
+
+class mixin(class_helper_meta):
+    """ Copies the attributes from a source
+        This allows composition rather than inheritance.
+    """
