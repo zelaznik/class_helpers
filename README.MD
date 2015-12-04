@@ -1,11 +1,20 @@
 # Class Helpers
+
+## Overview
 - A set of metaprogramming patterns to allow more flexible class manipulation, but with Pythonic syntax.
 - Allows metaclasses to be declared in a neat consistent syntax for both Python 2 and 3
 - Allows monkey patching of existing classes.
-  - Useful for customizing output from factory functions such as namedtuple.
+- Useful for customizing output from factory functions such as namedtuple.
 
-## class_helpers.metaclass
-##### For consistent metaclass Syntax between Python 2 and 3
+## How It Works
+- The helper methods return an instance of a special surrogate metaclass.
+- The regular class that is declared will attempt to create a subclass of those surrogates.
+- The __new__ method of the surrogate class has logic so that your normal class is returne
+
+## Available Methods
+
+### metaclass:
+#### For consistent metaclass Syntax between Python 2 and 3
 
 ```python
 class WorksInPython2(A, B):
@@ -19,7 +28,7 @@ class WorksForBoth(A, B, metaclass(ABCMeta)):
     pass
 ```
 
-## class_helpers.inherits
+### inherits
 ##### For resolving layout conflicts caused by the metaclass helper
 
 ```python
@@ -27,7 +36,7 @@ class Fixed(inherits([A,B]), metaclass(ABCMeta)):
     pass
 ```
 
-## class_helpers.patches
+### patches
 ##### Allows inline monkey patching of existing classes
 
 ```python
@@ -40,7 +49,7 @@ class Point(patches(Point)):
 assert Point is original_class #True
 ```
 
-## class_helpers.includes
+### includes
 ##### Composition not inheritence.  Attributes from another class are copied and mixed in.
 
 ```python
