@@ -1,4 +1,5 @@
-from class_helpers import class_helper_meta, patches, metaclass, inherits, includes, py3
+from class_helpers import class_helper_meta, patches, decorate
+from class_helpers import metaclass, inherits, includes, py3
 from collections import namedtuple, Sized, Iterable, Container
 from abc import ABCMeta, abstractmethod
 from operator import itemgetter
@@ -318,6 +319,40 @@ class test_py3_obsure_base_classes(unittest.TestCase):
     def test_assigns_correct_obscure_metaclass(self):
         cls = self.make_class()
         self.assertTrue(isinstance(cls, self.UberMeta))
+
+class test_class_decorator_wrapper(unittest.TestCase):
+    def setUp(self):
+
+        class Foo:
+            ''' foo doc '''
+            x = 3
+
+        def wraps(orig):
+            def _wraps(cls):
+                cls.__name__ = orig.__name__
+                cls.__doc__ = orig.__doc__
+                return cls
+            return _wraps
+
+        class Bar(decorate(wraps(Foo))):
+            ''' bar doc '''
+            x = 4
+
+
+
+        self.Foo, self.Bar = Foo, Bar
+
+    def tearDown(self):
+        del self.Foo, self.Bar
+
+    def test_name_updates(self):
+        self.assertEqual(self.Foo.__name__, 'Bar')
+
+    def test_doc_update(self):
+        self.assertEqual(self.Foo.__doc__, 'foo doc')
+
+    def decorator_does_not_change_too_much(self):
+        self.assertEqual(self.Foo.x, 3)
 
 if __name__ == '__main__':
     unittest.main()

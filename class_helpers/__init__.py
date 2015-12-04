@@ -25,9 +25,9 @@ class class_helper_meta(ABCMeta):
         return surrogate
 
     def __new__(mcls, name, surrogates_or_bases, dct):
-        params = {'name': name, 'dct': dct}
-        surrogates = []
         bases = []
+        surrogates = []
+        params = {'name': name, 'dct': dct}
         for item in surrogates_or_bases:
             if isinstance(item, class_helper_meta):
                 surrogates.append(item)
@@ -38,11 +38,13 @@ class class_helper_meta(ABCMeta):
         mcls.handle_surrogates(surrogates, params)
 
         if 'cls' in params:
-            return params['cls']
+            cls = params['cls']
+        else:
+            meta = params.get('__metaclass__') or type
+            bases = params.get('bases') or ()
+            cls = meta(name, bases, dct)
 
-        meta = params.get('__metaclass__') or type
-        bases = params.get('bases') or ()
-        return meta(name, bases, dct)
+        return cls
 
     @classmethod
     def handle_surrogates(mcls, surrogates, params):
@@ -91,6 +93,29 @@ class class_helper_meta(ABCMeta):
             msg = "Inconsistent base class layouts."
             raise TypeError(msg)
         params['bases'] = self.args
+
+    def _unwrap_decorate(self, params):
+        ''' We create a mock object which behaves like the class.
+            Once the class decorator updates the attributes on the 
+            mock object, we then merge its __dict__ with params['dct']
+        '''
+        for decorate in reversed(self.args):
+            dct = params['dct']
+            class mock(object):
+                pass
+            old = dict(mock.__dict__)
+            decorate(mock)
+            new = dict(mock.__dict__)
+
+            dual = set(new) & set(old)
+            deleted_keys = set(old) - set(new)
+            created_keys = set(new) - set(old)
+            changed_keys = {k for k in dual if new[k] != old[k]}
+
+            for key in (deleted_keys & set(dct)):
+                del dct[key]
+            for key in (created_keys | changed_keys):
+                dct[key] = new[key]
 
 def patches(value_or_array):
     """ Allows for inline monkey patching of classes
@@ -143,6 +168,24 @@ def inherits(value_or_array):
     """
     return class_helper_meta._wrap('inherits', value_or_array)
 
+def decorate(value_or_array):
+    """ Wraps a class decorator and gets it to run BEFORE the class is returned.
+
+        from functools import wraps
+        class Foo:
+            ''' foo doc '''
+            x = 3
+
+        class Bar(decorate(wraps(Foo))):
+            ''' bar doc '''
+            x = 4
+
+        assert Foo.__name__ == 'Bar'
+        assert Foo.__doc__ == 'bar doc'
+        assert Foo.x == 4 # functools.wraps does not change this attribute
+    """
+    return class_helper_meta._wrap('decorate', value_or_array)
+
 def py3(*bases, **dct):
     """ Allows Python3 syntax to be ported into Python2 class definitions.
         class Person(py3(A, B, metaclass=ABCMeta)):
@@ -156,4 +199,3 @@ def py3(*bases, **dct):
     if 'includes' in dct:
         args.append(includes(dct['includes']))
     return class_helper_meta._wrap('py3', tuple(args), solo=True)
-
