@@ -1,5 +1,5 @@
 from class_helpers import class_helper_meta, patches, decorate
-from class_helpers import metaclass, inherits, includes, py3
+from class_helpers import metaclass, inherits, includes, py3, py2
 from collections import namedtuple, Sized, Iterable, Container
 from abc import ABCMeta, abstractmethod
 from operator import itemgetter
@@ -276,6 +276,22 @@ class test_py3(unittest.TestCase):
         self.Enumerable.z = 10
         self.assertEqual(self.C.z, 5)
 
+class test_py2(test_py3):
+    def setUp(self):
+        class Enumerable(object):
+            x,y,z = 3,4,5
+        class A(object):
+            a = 0
+            x = -1
+        class B(object):
+            a = 1
+        surrogate = py2(A, B, includes=[Enumerable])
+        class C(surrogate):
+            __metaclass__ = ABCMeta
+        self.Enumerable = Enumerable
+        self.A, self.B, self.C = A, B, C
+        self.surrogate = surrogate
+
 class test_py3_obsure_base_classes(unittest.TestCase):
     def setUp(self):
         class Enumerable(object):
@@ -320,6 +336,20 @@ class test_py3_obsure_base_classes(unittest.TestCase):
     def test_assigns_correct_obscure_metaclass(self):
         cls = self.make_class()
         self.assertTrue(isinstance(cls, self.UberMeta))
+
+class test_py2_obscure_base_classes(test_py3_obsure_base_classes):
+    def make_class(self):
+        try:
+            return self.C
+        except AttributeError:
+            pass
+        A, B, Enumerable = self.A, self.B, self.Enumerable
+
+        class C(py3(A,B,includes=Enumerable)):
+            pass
+
+        self.C = C
+        return C    
 
 class test_class_decorator_wrapper(unittest.TestCase):
     def setUp(self):

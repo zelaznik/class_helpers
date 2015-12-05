@@ -40,8 +40,11 @@ class class_helper_meta(ABCMeta):
         if 'cls' in params:
             cls = params['cls']
         else:
-            meta = params.get('__metaclass__') or type
-            bases = params.get('bases') or ()
+            _mcls_ = '__metaclass__'
+            if (_mcls_ in params) and (_mcls_ in dct):
+                raise TypeError("The metaclass can only be declared in one place.")
+            meta = params.get(_mcls_) or dct.get(_mcls_) or type
+            bases = params.get('bases', ())
             name = params['name']
             cls = meta(name, bases, dct)
 
@@ -60,7 +63,7 @@ class class_helper_meta(ABCMeta):
             func = getattr(mcls, '_unwrap_%s' % surrogate.name)
             func(surrogate, params)
 
-    def _unwrap_py3(self, params):
+    def _unwrap_py6(self, params):
         self.handle_surrogates(self.args, params)
 
     def _unwrap_includes(self, params):
@@ -182,11 +185,16 @@ def metaclass(value_or_array):
         class WorksOnBoth(A, B, metaclass(ABCMeta)):
             pass
 
-        class AlsoThis(py3(A, B, metaclass=ABCMeta)):
+        If your bases classes cause a layout conflict,
+        please use the "inherits" helper method, py2, or py3
+
+        class Py2_Example(py2(A, B)):
+            __metaclass__ = ABCMeta
+
+        class Py3_Example(py3(A, B, metaclass=ABCMeta)):
             pass
 
-        If your bases classes cause a layout conflict,
-        please use the "inherits" helper method
+
     """
     return class_helper_meta._wrap('metaclass', value_or_array)
 
@@ -220,6 +228,16 @@ def py3(*bases, **dct):
         class Person(py3(A, B, metaclass=ABCMeta)):
             pass
     """
+    return py6(*bases, **dct)
+
+def py2(*bases, **dct):
+    """ Allows Python2 syntax to be ported into Python3 class definitions.
+        class Person(py2(A, B)):
+            __metaclass__ = ABCMeta
+    """
+    return py6(*bases, **dct)
+
+def py6(*bases, **dct):
     args = []
     if bases:
         args.append(inherits(bases))
@@ -227,4 +245,4 @@ def py3(*bases, **dct):
         args.append(metaclass(dct['metaclass']))
     if 'includes' in dct:
         args.append(includes(dct['includes']))
-    return class_helper_meta._wrap('py3', tuple(args), solo=True)
+    return class_helper_meta._wrap('py6', tuple(args), solo=True)
