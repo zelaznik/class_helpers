@@ -353,14 +353,6 @@ class test_py2_obscure_base_classes(test_py3_obsure_base_classes):
 
 class test_class_decorator_wrapper(unittest.TestCase):
     def setUp(self):
-        # def wraps(orig):
-        #     def _wraps(cls):
-        #         cls.__module__ = orig.__module__
-        #         cls.__name__ = orig.__name__
-        #         cls.__doc__ = orig.__doc__
-        #         return cls
-        #    return _wraps
-
         class Foo(object):
             '''foo doc'''
             x = 3
